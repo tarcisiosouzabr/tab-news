@@ -8,8 +8,9 @@ async function query(queryObj) {
     return result;
   } catch (err) {
     console.log(err);
+    throw err;
   } finally {
-    await client.end();
+    await client?.end();
   }
 }
 
