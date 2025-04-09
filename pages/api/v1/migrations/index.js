@@ -8,10 +8,7 @@ const router = createRouter();
 router.get(getHandler);
 router.post(postHandler);
 
-export default router.handler({
-  onNoMatch: controller.onNoMatchHandler,
-  onError: controller.onErrorHandler,
-});
+export default router.handler(controller.errorHandlers);
 
 const defaultMigrationOptions = {
   dryRun: true,
