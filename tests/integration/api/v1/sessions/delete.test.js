@@ -8,7 +8,7 @@ beforeAll(async () => {
   await orchestrator.runPendingMigrations();
 });
 
-describe("GET to api/v1/user", () => {
+describe("DELETE to api/v1/sessions", () => {
   describe("Default user", () => {
     test("With valid session", async () => {
       const createdUser = await orchestrator.createUser({
@@ -16,46 +16,39 @@ describe("GET to api/v1/user", () => {
       });
 
       const sessionObject = await orchestrator.createSession(createdUser.id);
-      const response = await fetch("http://localhost:3000/api/v1/user", {
+      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+        method: "DELETE",
         headers: {
           Cookie: `session_id=${sessionObject.token}`,
         },
       });
       expect(response.status).toBe(200);
 
-      const cacheControl = response.headers.get("Cache-Control");
-      expect(cacheControl).toBe(
-        "no-store, no-cache, max-age=0, must-revalidate",
-      );
       const responseBody = await response.json();
 
       expect(responseBody).toEqual({
-        id: createdUser.id,
-        username: createdUser.username,
-        email: createdUser.email,
-        password: createdUser.password,
-        created_at: createdUser.created_at.toISOString(),
-        updated_at: createdUser.updated_at.toISOString(),
+        id: sessionObject.id,
+        token: sessionObject.token,
+        user_id: sessionObject.user_id,
+        expires_at: responseBody.expires_at,
+        created_at: responseBody.created_at,
+        updated_at: responseBody.updated_at,
       });
 
-      const renewedSessionObject = await session.findOneValidByToken(
-        sessionObject.token,
-      );
-
       expect(
-        renewedSessionObject.expires_at > sessionObject.expires_at,
-      ).toEqual(true);
+        responseBody.expires_at < sessionObject.expires_at.toISOString(),
+      ).toBe(true);
       expect(
-        renewedSessionObject.updated_at > sessionObject.updated_at,
-      ).toEqual(true);
+        responseBody.updated_at > sessionObject.updated_at.toISOString(),
+      ).toBe(true);
 
       const parsedSetCookie = setCookieParser(response, {
         map: true,
       });
       expect(parsedSetCookie.session_id).toEqual({
         name: "session_id",
-        value: sessionObject.token,
-        maxAge: session.EXPIRATION_IN_MILLISECONDS / 1000,
+        value: "invalid",
+        maxAge: -1,
         path: "/",
         httpOnly: true,
       });
@@ -64,7 +57,8 @@ describe("GET to api/v1/user", () => {
     test("With nonexistent session", async () => {
       const nonexistentToken = "ca3cad63-e458-46b5-98dd-4b104d435092";
 
-      const response = await fetch("http://localhost:3000/api/v1/user", {
+      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+        method: "DELETE",
         headers: {
           Cookie: `session_id=${nonexistentToken}`,
         },
@@ -93,7 +87,8 @@ describe("GET to api/v1/user", () => {
 
       jest.useRealTimers();
 
-      const response = await fetch("http://localhost:3000/api/v1/user", {
+      const response = await fetch("http://localhost:3000/api/v1/sessions", {
+        method: "DELETE",
         headers: {
           Cookie: `session_id=${sessionObject.token}`,
         },
