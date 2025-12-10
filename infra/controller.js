@@ -9,6 +9,7 @@ import {
   ForbiddenError,
 } from "infra/error.js";
 import user from "models/user.js";
+import authorization from "models/authorization.js";
 
 async function injectAnonymousOrUser(request, response, next) {
   if (request.cookies?.session_id) {
@@ -88,7 +89,7 @@ function clearSessionCookie(response) {
 function canRequest(feature) {
   return function canRequestMiddleware(request, response, next) {
     const userTryingToRequest = request.context.user;
-    if (userTryingToRequest.features.includes(feature)) {
+    if (authorization.can(userTryingToRequest, feature)) {
       return next();
     }
 
