@@ -5,6 +5,7 @@ import database from "infra/database";
 import migrator from "models/migrator.js";
 import user from "../models/user.js";
 import session from "../models/session.js";
+import activation from "models/activation.js";
 
 const emailHttpUrl = `http://${process.env.EMAIL_HTTP_HOST}:${process.env.EMAIL_HTTP_PORT}`;
 
@@ -72,12 +73,30 @@ async function getLastEmail() {
   const emailListResponse = await fetch(`${emailHttpUrl}/messages`);
   const emailListBody = await emailListResponse.json();
   const lastEmailITem = emailListBody.pop();
+
+  if (!lastEmailITem) return null;
+
   const emailTextResponse = await fetch(
     `${emailHttpUrl}/messages/${lastEmailITem.id}.plain`,
   );
   const emailTextBody = await emailTextResponse.text();
   lastEmailITem.text = emailTextBody;
   return lastEmailITem;
+}
+
+function extractUUID(text) {
+  const match = text.match(/[0-9a-fA-F-]{36}/);
+  return match ? match[0] : null;
+}
+
+async function activateUser(user) {
+  const activatedUser = await activation.activateUserByUserId(user.id);
+  return activatedUser;
+}
+
+async function addFeaturesToUser(userObject, features) {
+  const currentUser = await user.findOneById(userObject.id);
+  user.setFeatures(currentUser.id, [...currentUser.features, ...features]);
 }
 
 const orchestrator = {
@@ -88,6 +107,9 @@ const orchestrator = {
   createSession,
   deleteAllEmails,
   getLastEmail,
+  extractUUID,
+  activateUser,
+  addFeaturesToUser,
 };
 
 export default orchestrator;

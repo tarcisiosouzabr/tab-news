@@ -116,3 +116,23 @@ export class UnauthorizedError extends Error {
     };
   }
 }
+
+export class ForbiddenError extends Error {
+  constructor({ cause, message, action }) {
+    super(message || "Usuário não autenticado.", {
+      cause: cause,
+    });
+    this.name = "ForbiddenError";
+    this.action = action || "Faça novamente o login para continuar.";
+    this.statusCode = 403;
+  }
+
+  toJSON() {
+    return {
+      message: this.message,
+      name: this.name,
+      action: this.action,
+      status_code: this.statusCode,
+    };
+  }
+}
